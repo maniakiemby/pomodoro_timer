@@ -1,0 +1,92 @@
+<Player>:
+    Button:
+        id: playing
+        pos_hint: {'x': .1, 'top': .8}
+        size_hint: .1, .1
+        background_color: 0,0,0,0
+
+        Image:
+            id: playing_image
+            source: "atlas://data//images//myatlas/play"
+            center_x: self.parent.center_x - .2
+            center_y: self.parent.center_y
+            size_hint_x: .3
+            allow_stretch: True
+
+    Button:
+        id: next
+        pos_hint: {'x': .4, 'top': .8}
+        size_hint: .1, .1
+        background_color: 0,0,0,0
+
+        Image:
+            id: next_image
+            source: "atlas://data//images//myatlas/next"
+            center_x: self.parent.center_x - .2
+            center_y: self.parent.center_y
+            size_hint_x: .3
+            allow_stretch: True
+    Label:
+        id: timer
+        text: '23:10'
+        font_size: '35sp'
+        size_hint_y: None
+        height: self.texture_size[1] + dp(10)
+        #pos_hint: {'x': .1, 'top': .1}
+        pos: root.x * .8, (root.height / 3) * 3
+
+    Button:
+        id: volume
+        pos_hint: {'x': .3, 'top': .5}
+        size_hint: .05, .1
+        background_color: 0,0,0,0
+
+        Image:
+            id: volume_image
+            source: "atlas://data//images//myatlas/voice"
+            center_x: self.parent.center_x - .2
+            center_y: self.parent.center_y
+            size_hint_x: .3
+            allow_stretch: True
+    Label:
+        id: break_or_work
+        text: 'work time'
+        font_size: 30
+        #size_hint_y: None
+        #height: self.texture_size[1] + dp(10)
+        pos_hint: {'x': .6, 'top': .5}
+        size_hint: .2, .1
+
+    TextInput:
+        text: "https://www.youtube.com/watch?v=TeVx53E_n3I"
+        id: new_item
+        pos_hint: {'x': .05, 'top': .2}
+        size_hint: .65, .15
+
+    Button:
+        id: download
+        pos_hint: {'x': .8, 'top': .25}
+        size_hint: .1, .15
+        background_color: 0,0,0,0
+
+        Image:
+            id: download_image
+            source: "atlas://data//images//myatlas/download"
+            center_x: self.parent.center_x - .2
+            center_y: self.parent.center_y
+            size_hint_x: .3
+            allow_stretch: True
+
+    Button:
+        id: settings
+        pos_hint: {'x': .5, 'top': .5}
+        size_hint: .07, .1
+        background_color: 0,0,0,0
+
+        Image:
+            id: settings_image
+            source: "atlas://data//images//myatlas/settings"
+            center_x: self.parent.center_x - .2
+            center_y: self.parent.center_y
+            size_hint_x: .3
+            allow_stretch: True
