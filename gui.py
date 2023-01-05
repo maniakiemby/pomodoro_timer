@@ -1,7 +1,10 @@
+import os
 import subprocess
 # from subprocess import Popen, CREATE_NEW_CONSOLE
 import asyncio
+import sys
 from asyncio import new_event_loop, get_event_loop
+import threading
 
 import kivy
 from kivy.config import Config
@@ -14,6 +17,7 @@ from kivy.uix.button import Button
 from kivy.uix.image import Image
 from kivy.core.window import Window
 from kivy.atlas import Atlas
+from aioconsole import ainput
 
 from main import PlayMusic, Pomodoro
 
@@ -21,9 +25,17 @@ from main import PlayMusic, Pomodoro
 kivy.require('2.1.0')
 __version__ = '0.1'
 
+RUNNING_PATH = os.getcwd()
 Config.set('graphics', 'width', '800')
 Config.set('graphics', 'height', '250')
 Config.write()
+
+
+class Play(threading.Thread):
+    def run(self) -> None:
+        play = PlayMusic()
+        asyncio.run(play.playing_loop())
+        play.stop_pomodoro()
 
 
 class Player(FloatLayout):
@@ -44,8 +56,7 @@ class Player(FloatLayout):
         self.ids['download'].bind(on_release=self.download_new_track)
         self.ids['settings'].bind(on_release=self.open_settings)
 
-        self.play_music = PlayMusic()
-        # self.new_console_for_the_process = subprocess.Popen('cmd', creationflags=subprocess.CREATE_NEW_CONSOLE)  # subprocess.CREATE_NO_WINDOW
+        self.play_music = Play()
 
     def play_pomodoro(self, *args):
         if self.stage == 'preparation':
@@ -61,22 +72,13 @@ class Player(FloatLayout):
         self.playing_image.source = "atlas://data//images//myatlas/resume"
         self.stage = 'play'
 
-        # asyncio.run(self.play_music.play_pomodoro())
-        asyncio.run(self.play_music.playing_loop())
-
-        # self.new_console_for_the_process.
-
-        # self.loop.run_forever()
-        # try:
-        #     self.loop.run_forever()
-        # finally:
-        #     self.loop.close()
+        self.play_music.start()
 
     def pause(self, *args):
         self.playing_image.source = "atlas://data//images//myatlas/play"
         self.stage = 'pause'
 
-        # self.play_music.pause_pomodoro()
+        self.play_music.getName()
 
     def resume(self, *args):
         self.playing_image.source = "atlas://data//images//myatlas/resume"
@@ -97,4 +99,10 @@ class MyApp(App):
 
 
 if __name__ == '__main__':
-    MyApp().run()
+    app = MyApp()
+    app.run()
+
+    try:
+        sys.exit(app.stop())
+    except SystemExit:
+        print('Player Window Closed')

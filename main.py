@@ -1,6 +1,7 @@
 import asyncio
 import os
 import sys
+import threading
 from dataclasses import dataclass
 import random
 import time
@@ -11,6 +12,7 @@ from decimal import Decimal
 import subprocess
 import signal
 
+import psutil
 from aioconsole import ainput
 import ffmpeg
 from pytube import YouTube
@@ -121,20 +123,30 @@ class Pomodoro:
         return False
 
 
-async def process_playing_in_shell(path: str = 'name of track', length: int = 'seconds', start: float = 0,
-                                   volume: int = 100):
-    _process = await asyncio.create_subprocess_shell(
-        "ffplay -ss {start} -t {length} -volume {volume} \"{track}\" -autoexit -nodisp".format(
-            track=path, length=length, start=start, volume=volume),
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-    stdout, stderr = await _process.communicate()
+class ThreadPlayingMusic(threading.Thread):
+    def __init__(self, path, length, start, volume) -> None:
+        super(ThreadPlayingMusic, self).__init__()
+        self.daemon = True
+        self._stop_event = threading.Event()
 
-    return _process
-    # try:
-    #     await _process
-        # return True
-    # except asyncio.CancelledError:
-    #     return False
+        self.path = path
+        self.length = length
+        self.start = start
+        self.volume = volume
+        self.process_playing = None
+
+    def run(self) -> None:
+        self.process_playing = subprocess.Popen(
+            "ffplay -ss {start} -t {length} -volume {volume} \"{track}\" -autoexit -nodisp".format(
+                track=self.path, length=self.length, start=self.start, volume=self.volume),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        stdout, stderr = self.process_playing.communicate()
+
+    def stop(self):
+        self._stop_event.set()
+
+    def stopped(self):
+        return self._stop_event.is_set()
 
 
 @dataclass
@@ -158,6 +170,9 @@ class PlayMusic:
 
         go_to_tracks()
 
+    def __del__(self):
+        pass
+
     @property
     def tracks(self):
         return self.__tracks
@@ -169,64 +184,33 @@ class PlayMusic:
             self.__tracks = [x[2] for x in os.walk(os.getcwd())][0]
             random.shuffle(self.__tracks)
 
-    # def pause_pomodoro(self):
-    #     asyncio.subprocess.Process.terminate(self.process_playing)
-    #     print('Pause ...')
-    # os.system('pause')
-
     async def playing_loop(self):
-        print("start pomodoro")
         while True:
             for track in self.tracks:
                 while True:
-                    # print('playing ...')
                     self.start_time_playing_track = time.time()
-                    self.part_currently_playing = await asyncio.create_task(self.play_part_of_track(
+
+                    self.part_currently_playing = await self.play_part_of_track(
                         track, length=int(LENGTH_SESSION - self.time_already_played),
-                        start=self.track_time_already_played, volume=70))
+                        start=self.track_time_already_played, volume=70)
 
-                    # print('next playing ...')
-                    # await self.part_currently_playing
+                    possible_end_track = False
+                    if self.process_playing.returncode == 0:
+                        self.stop_time_playing_track = time.time()
+                        possible_end_track = True
 
-                    # await asyncio.sleep(int(LENGTH_SESSION - self.time_already_played))
-
-                    # action = input('Przerwać ? (tak/t/y)\n')
-                    # os.system('pause')
-                    # print("Intermission: ", intermission)  # normally return False
-                    self.stop_time_playing_track = time.time()
                     self.time_already_played += self.stop_time_playing_track - self.start_time_playing_track
                     self.track_time_already_played += self.time_already_played
-
-                    if not self.part_currently_playing:
-                        print('task cancelled !!')
-
-                        # if self.part_currently_playing:  # code 'if interrupt playing'
-                        # input, który czeka na komendę
-                        # albo pausa
-                        # albo graj następny utwór
-
-                        # TODO 
-                        # https://stackoverflow.com/questions/30765606/whats-the-correct-way-to-clean-up-after-an-interrupted-event-loop
-                        # https://github.com/scivision/asyncio-subprocess-ffmpeg/blob/main/examples/benchmark.py
-
-                        response = await ainput("resume / next (answer)\n")
-                        if response == 'resume':
-                            pass
-                            # self.resume_currently_playing_part_of_track()
-                        elif response == 'next':
-                            break
-                    elif self.part_currently_playing:
-                        # print('task done !!')
-                        if self.time_already_played >= LENGTH_SESSION:
-                            if self.which_break % 4 == 0:
-                                await self.play_long_pause()
-                            else:
-                                await self.play_short_pause()
-                            self.time_already_played = 0
-                            self.start_time_playing_pomodoro = time.time()
-                            self.which_break += 1
+                    if self.time_already_played >= LENGTH_SESSION:
+                        if self.which_break % 4 == 0:
+                            await self.play_long_pause()
                         else:
-                            break
+                            await self.play_short_pause()
+                        self.time_already_played = 0
+                        self.start_time_playing_pomodoro = time.time()
+                        self.which_break += 1
+                    elif possible_end_track:
+                        break
 
                 self.track_time_already_played = 0
 
@@ -242,42 +226,38 @@ class PlayMusic:
             subprocess.run("ffplay -volume {volume} \"{track}\" -autoexit -nodisp".format(
                 volume=volume, track=path))
 
-    """
-    def play_part_of_track(self, path: str = 'name of track', length: int = 'seconds', start: float = 0,
-                           volume: int = 100):
-        print('play part of track ...')
-        played = True
-        self.process_playing = subprocess.Popen(
-            "ffplay -ss {start} -t {length} -volume {volume} \"{track}\" -autoexit -nodisp".format(
-                track=path, length=length, start=start, volume=volume),
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        stdout, stderr = self.process_playing.communicate()
-
-        if self.process_playing.returncode == 0:
-            played = False
-
-        return played
-
-    """
-
     async def play_part_of_track(self, path: str = 'name of track', length: int = 'seconds', start: float = 0,
                                  volume: int = 100):
-        try:
-            self.process_playing = await asyncio.create_task(
-                process_playing_in_shell(path=path, length=length, start=start, volume=volume))
-        except AttributeError:
-            return False
-        else:
-            return True
 
-    async def pause_currently_playing_part_of_track(self):
-        await asyncio.subprocess.Process.wait(self.process_playing)
+        self.process_playing = await asyncio.create_subprocess_shell(
+            "ffplay -ss {start} -t {length} -volume {volume} \"{track}\" -autoexit -nodisp".format(
+                track=path, length=length, start=start, volume=volume),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
+        stdout, stderr = await self.process_playing.communicate()
 
-        # if self.part_currently_playing.done():
-        #     return
+        # import pdb
+        # pdb.set_trace()
 
-    # TODO Dodać funkcjoonalność, która po zrobieniu pauzy w trakcie przerwy
-    #  anuluje ją i będzie dalej odtwarzać utwór pomodoro
+        """
+        stdout, stderr = await self.process_playing.communicate()
+        stdout = stdout.decode('UTF-8')
+        stderr = stderr.decode('UTF-8')
+        print(stdout)
+        print('-----------------------------------------')
+        print(stderr)
+        """
+
+        # TODO ZMIANA ZASADY ZIAŁANIA:
+        #  pytanie o pause end ma wyskoczyć przy każdym subprocesie (gather w tej metodzie, a nie przy wywołaniu)
+        #  i po przerwaniu kończy grać wszystko. Następnie po wciśnięciu play gramy od początku.
+
+    async def stop_pomodoro(self):
+        if self.process_playing.returncode is None:
+            parent = psutil.Process(self.process_playing.pid)
+            for child in parent.children(recursive=True):
+                child.terminate()
+            parent.terminate()
+            self.stop_time_playing_track = time.time()
 
     async def play_short_pause(self):
         """Playing short break background music with bells at the beginning and at the end."""
@@ -305,29 +285,29 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         arg = sys.argv[1]
 
+        # if arg == 'playing':
+        #     task = asyncio.run(pomodoro_music.playing_loop())
+
         if arg.lower() == 'play':
+            print(ABSOLUTE_PATH)
+
 
             async def playback_management():
-                print("start playback management")
-                while True:
-                    response = await ainput("pause / end ?\n")
-                    print(response + ' <- this is response !')
-
-                    if response == 'pause':
-                        await pomodoro_music.pause_currently_playing_part_of_track()
-                    elif response == 'end':
-                        pass  # todo close the application
-                    else:
-                        pass
+                await ainput('Press Enter to finish ...\n')
+                await pomodoro_music.stop_pomodoro()
+                asyncio.get_running_loop().stop()
 
 
             async def play_pomodoro():
-                await asyncio.gather(pomodoro_music.playing_loop(), playback_management())
+                task = asyncio.gather(pomodoro_music.playing_loop(), playback_management())
+
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    task.cancel()
 
 
             asyncio.run(play_pomodoro())
-
-            # asyncio.run(pomodoro_music.playing_loop())
 
         elif arg.startswith('https'):
             new_track = pomodoro.download_track_to_folder(arg)
