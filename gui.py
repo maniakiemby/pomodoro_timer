@@ -26,26 +26,26 @@ kivy.require('2.1.0')
 __version__ = '0.1'
 
 RUNNING_PATH = os.getcwd()
-Config.set('graphics', 'width', '800')
+Config.set('graphics', 'width', '700')
 Config.set('graphics', 'height', '250')
 Config.write()
 
 
-class Play(threading.Thread):
-    def run(self) -> None:
-        play = PlayMusic()
-        asyncio.run(play.playing_loop())
-        play.stop_pomodoro()
+# class Play(threading.Thread):
+#     def run(self) -> None:
+#         play = PlayMusic()
+#         asyncio.run(play.playing_loop())
+#         play.stop_pomodoro()
 
 
 class Player(FloatLayout):
     def __init__(self, **kwargs):
         super(Player, self).__init__(**kwargs)
-        self.stage = 'preparation'
+        self.stage = 'no play'
         # preperation, play, pause
         self.playing = self.ids['playing']
         self.playing.bind(on_release=self.play_pomodoro)
-        self.playing_image = self.ids['playing_image']  # names: play, resume
+        self.playing_image = self.ids['playing_image']  # names: play, no play
         self.next = self.ids['next']
         self.timer = self.ids['timer']
         self.volume = self.ids['volume']
@@ -56,33 +56,39 @@ class Player(FloatLayout):
         self.ids['download'].bind(on_release=self.download_new_track)
         self.ids['settings'].bind(on_release=self.open_settings)
 
-        self.play_music = Play()
+        self.play_music = PlayMusic()
+        self.thread_play_music = None
 
     def play_pomodoro(self, *args):
-        if self.stage == 'preparation':
+        if self.stage == 'no play':
             self.play()
 
         elif self.stage == 'play':
-            self.pause()
+            self.stop()
 
-        elif self.stage == 'pause':
-            self.resume()
+        # elif self.stage == 'pause':
+        #     self.resume()
 
     def play(self, *args):
         self.playing_image.source = "atlas://data//images//myatlas/resume"
         self.stage = 'play'
 
-        self.play_music.start()
+        self.thread_play_music = threading.Thread(target=self.play_music.playing_loop)
+        self.thread_play_music.start()
 
-    def pause(self, *args):
+        # self.thread_play_music.join()
+
+    def stop(self, *args):
         self.playing_image.source = "atlas://data//images//myatlas/play"
-        self.stage = 'pause'
+        self.stage = 'no play'
 
-        self.play_music.getName()
+        self.play_music.playing = False
+        self.play_music.part_currently_playing.stop()
+        self.play_music.reset()
 
-    def resume(self, *args):
-        self.playing_image.source = "atlas://data//images//myatlas/resume"
-        self.stage = 'play'
+    # def resume(self, *args):
+    #     self.playing_image.source = "atlas://data//images//myatlas/resume"
+    #     self.stage = 'play'
 
     def download_new_track(self, *args):
         pass
