@@ -3,6 +3,7 @@ import subprocess
 # from subprocess import Popen, CREATE_NEW_CONSOLE
 import asyncio
 import sys
+import time
 from asyncio import new_event_loop, get_event_loop
 import threading
 
@@ -18,6 +19,7 @@ from kivy.uix.image import Image
 from kivy.core.window import Window
 from kivy.atlas import Atlas
 from aioconsole import ainput
+from kivy.clock import Clock
 
 from main import PlayMusic, Pomodoro
 
@@ -31,11 +33,21 @@ Config.set('graphics', 'height', '250')
 Config.write()
 
 
-# class Play(threading.Thread):
-#     def run(self) -> None:
-#         play = PlayMusic()
-#         asyncio.run(play.playing_loop())
-#         play.stop_pomodoro()
+class MyThread(threading.Thread):
+    def __init__(self, **kwargs):
+        super(MyThread, self).__init__(**kwargs)
+        self.daemon = True
+        self._stop_event = threading.Event()
+        self.playing = PlayMusic()
+
+    def run(self) -> None:
+        self.playing.playing_loop()
+
+    def stop(self) -> None:
+        # self.target
+        self.playing.stop_pomodoro()
+        self._stop_event.set()
+        self.playing.reset()
 
 
 class Player(FloatLayout):
@@ -73,18 +85,19 @@ class Player(FloatLayout):
         self.playing_image.source = "atlas://data//images//myatlas/resume"
         self.stage = 'play'
 
-        self.thread_play_music = threading.Thread(target=self.play_music.playing_loop)
+        self.thread_play_music = MyThread()
         self.thread_play_music.start()
 
+        # self.timer.update()
         # self.thread_play_music.join()
 
     def stop(self, *args):
         self.playing_image.source = "atlas://data//images//myatlas/play"
         self.stage = 'no play'
 
-        self.play_music.playing = False
-        self.play_music.part_currently_playing.stop()
-        self.play_music.reset()
+        # self.play_music.playing = False
+        # self.play_music.part_currently_playing
+        self.thread_play_music.stop()
 
     # def resume(self, *args):
     #     self.playing_image.source = "atlas://data//images//myatlas/resume"
@@ -96,6 +109,19 @@ class Player(FloatLayout):
     def open_settings(self, *args):
         # open file with settings
         pass
+
+
+class Timer(Label):
+    def __init__(self, **kwargs):
+        super(Timer, self).__init__(**kwargs)
+        self.text = time.strftime('%H:%M:%S')
+        Clock.schedule_interval(self.update, 1)
+
+    def update(self, stopwatch_time=False, *args):
+        # if stopwatch_time:
+        #     print(stopwatch_time)
+
+        self.text = time.strftime('%H:%M:%S')
 
 
 class MyApp(App):

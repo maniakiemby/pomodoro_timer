@@ -26,14 +26,11 @@
             center_y: self.parent.center_y
             size_hint_x: .3
             allow_stretch: True
-    Label:
+    Timer:
         id: timer
-        text: '23:10'
-        font_size: '35sp'
-        size_hint_y: None
-        height: self.texture_size[1] + dp(10)
-        #pos_hint: {'x': .1, 'top': .1}
-        pos: root.x * .8, (root.height / 3) * 3
+        font_size: '55sp'
+        size: self.texture_size
+        pos: 200, 75
 
     Button:
         id: volume
@@ -54,7 +51,7 @@
         font_size: 30
         #size_hint_y: None
         #height: self.texture_size[1] + dp(10)
-        pos_hint: {'x': .6, 'top': .5}
+        pos_hint: {'x': .7, 'top': .5}
         size_hint: .2, .1
 
     TextInput:

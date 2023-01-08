@@ -32,9 +32,9 @@ from pytube import YouTube
 # AudioSegment.ffmpeg = "C:\\ffmpeg\\bin\\ffmpeg.exe"
 
 # all lengths in seconds
-LENGTH_SESSION = 5  # 25 * 60
-LENGTH_SHORT_PAUSE = 10  # 5 * 60
-LENGTH_LONG_PAUSE = 25  # 30 * 60
+LENGTH_SESSION = 25 * 60
+LENGTH_SHORT_PAUSE = 5 * 60
+LENGTH_LONG_PAUSE = 30 * 60
 
 # paths
 ABSOLUTE_PATH = os.getcwd()
@@ -133,13 +133,13 @@ class Pomodoro:
         return False
 
 
-def shell_playing(path, length, starting_moment=None, volume=70):
+def shell_playing(path, length, starting_moment=0, volume=100):
     # start_time = perf_counter()
 
     with subprocess.Popen("ffplay -ss {start} -t {length} -volume {volume} \"{track}\" -autoexit -nodisp".format(
                 track=path, length=length, start=starting_moment, volume=volume),
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True) as proc:
-        return
+        return proc
         # if perf_counter() - start_time <= 1:
         #     print(proc.stderr.read().decode('UTF-8'))
         #     raise Exception('A problem occured with ffplay module. Above info from him.')
@@ -195,6 +195,7 @@ class PlayMusic:
         self.start_time_playing_pomodoro: time = None
         self.stop_time_playing_pomodoro: time = None
 
+        self.process_playing = None
         self.playing = True
 
         self.which_break = 1
@@ -210,6 +211,7 @@ class PlayMusic:
         self.start_time_playing_pomodoro: time = None
         self.stop_time_playing_pomodoro: time = None
 
+        self.process_playing = None
         self.playing = True
 
         self.which_break = 1
@@ -237,15 +239,17 @@ class PlayMusic:
 
                     print('Playing')
                     length = int(LENGTH_SESSION - self.time_already_played)
-                    self.part_currently_playing = ThreadPlayingMusic(
-                        path=track, length=length, starting_moment=self.track_time_already_played, volume=70)
-                    self.part_currently_playing.start()
-                    self.part_currently_playing.join()
+
+                    self.part_currently_playing = shell_playing(track, length, self.track_time_already_played)
+
+                    # self.part_currently_playing = ThreadPlayingMusic(
+                    #     path=track, length=length, starting_moment=self.track_time_already_played, volume=70)
+                    # self.part_currently_playing.start()
+                    # self.part_currently_playing.join()
 
                     self.stop_time_playing_track = time.time()
                     if not self.part_currently_playing:
                         break
-
 
                     # possible_end_track = True
                     # print(f"self.part_currently_playing -> {self.part_currently_playing.stopped()}")
@@ -312,6 +316,11 @@ class PlayMusic:
         #  i po przerwaniu kończy grać wszystko. Następnie po wciśnięciu play gramy od początku.
 
     def stop_pomodoro(self):
+        parent = psutil.Process(self.part_currently_playing.pid)
+        for child in parent.children(recursive=True):
+            child.terminate()
+        parent.terminate()
+
         self.part_currently_playing.stop()
         print('Playing should be stopped .')
         # if self.process_playing.returncode is None:
