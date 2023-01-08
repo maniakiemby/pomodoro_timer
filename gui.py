@@ -1,3 +1,4 @@
+import datetime
 import os
 import subprocess
 # from subprocess import Popen, CREATE_NEW_CONSOLE
@@ -28,26 +29,16 @@ kivy.require('2.1.0')
 __version__ = '0.1'
 
 RUNNING_PATH = os.getcwd()
-Config.set('graphics', 'width', '700')
+Config.set('graphics', 'width', '800')
 Config.set('graphics', 'height', '250')
 Config.write()
 
 
-class MyThread(threading.Thread):
-    def __init__(self, **kwargs):
-        super(MyThread, self).__init__(**kwargs)
-        self.daemon = True
-        self._stop_event = threading.Event()
-        self.playing = PlayMusic()
-
-    def run(self) -> None:
-        self.playing.playing_loop()
-
-    def stop(self) -> None:
-        # self.target
-        self.playing.stop_pomodoro()
-        self._stop_event.set()
-        self.playing.reset()
+# class Play(threading.Thread):
+#     def run(self) -> None:
+#         play = PlayMusic()
+#         asyncio.run(play.playing_loop())
+#         play.stop_pomodoro()
 
 
 class Player(FloatLayout):
@@ -85,19 +76,19 @@ class Player(FloatLayout):
         self.playing_image.source = "atlas://data//images//myatlas/resume"
         self.stage = 'play'
 
-        self.thread_play_music = MyThread()
+        self.thread_play_music = threading.Thread(target=self.play_music.playing_loop)
         self.thread_play_music.start()
 
-        # self.timer.update()
+        self.timer.beginning()
         # self.thread_play_music.join()
 
     def stop(self, *args):
         self.playing_image.source = "atlas://data//images//myatlas/play"
         self.stage = 'no play'
 
-        # self.play_music.playing = False
-        # self.play_music.part_currently_playing
-        self.thread_play_music.stop()
+        self.play_music.playing = False
+        self.play_music.part_currently_playing.stop()
+        self.play_music.reset()
 
     # def resume(self, *args):
     #     self.playing_image.source = "atlas://data//images//myatlas/resume"
@@ -114,14 +105,27 @@ class Player(FloatLayout):
 class Timer(Label):
     def __init__(self, **kwargs):
         super(Timer, self).__init__(**kwargs)
-        self.text = time.strftime('%H:%M:%S')
-        Clock.schedule_interval(self.update, 1)
+        self.time_str = '%H:%M:%S'
+        self.text = time.strftime(self.time_str)
+        Clock.schedule_interval(self.update_time, 1)
+        self.time_start = None
 
-    def update(self, stopwatch_time=False, *args):
-        # if stopwatch_time:
-        #     print(stopwatch_time)
+    def update_time(self, stopwatch_time=False, *args):
+        if self.time_start:
+            t = time.time()
+            diff_time = t - self.time_start
+            self.text = time.strftime(self.time_str, time.gmtime(diff_time))
+        else:
+            self.text = time.strftime(self.time_str)
 
-        self.text = time.strftime('%H:%M:%S')
+    # def to_count(self):
+    #     self.text
+
+    def beginning(self):
+        # super(Timer, self).__init__(text=time.strftime('00:00'))
+        # self.text = time.strftime('00:00')
+        # Clock.schedule_interval(self.update_time, 1)
+        self.time_start = time.time()
 
 
 class MyApp(App):

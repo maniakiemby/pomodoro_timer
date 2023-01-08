@@ -58,8 +58,7 @@ def track_in_location(track: str) -> Union[bool, Exception]:
         return True
     else:
         raise FileNotFoundError("track {} not found in current location. Current location: {}".format(
-            track, os.getcwd()
-        ))
+            track, os.getcwd()))
 
 
 def go_to_tracks():
@@ -134,18 +133,10 @@ class Pomodoro:
 
 
 def shell_playing(path, length, starting_moment=0, volume=100):
-    # start_time = perf_counter()
-
     with subprocess.Popen("ffplay -ss {start} -t {length} -volume {volume} \"{track}\" -autoexit -nodisp".format(
-                track=path, length=length, start=starting_moment, volume=volume),
+            track=path, length=length, start=starting_moment, volume=volume),
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True) as proc:
-        return proc
-        # if perf_counter() - start_time <= 1:
-        #     print(proc.stderr.read().decode('UTF-8'))
-        #     raise Exception('A problem occured with ffplay module. Above info from him.')
-        # stdout, stderr = proc.communicate()
-
-    # print('task completed.')
+        return
 
 
 class ThreadPlayingMusic(threading.Thread):
@@ -172,12 +163,7 @@ class ThreadPlayingMusic(threading.Thread):
             child.terminate()
         parent.terminate()
 
-    #     for child in parent.children(recursive=True):
-    #         child.terminate()
-    #     parent.terminate()
-    #     self.stop_time_playing_track = time.time()
-    #     self.process_playing.kill()
-        self._stop_event.set()
+        self._stop_event.set()  # czy to jest potrzebne ?
 
     def stopped(self) -> int:  # sprawdzić, czy napewno zwraca inta
         return self._stop_event.is_set()
@@ -195,7 +181,6 @@ class PlayMusic:
         self.start_time_playing_pomodoro: time = None
         self.stop_time_playing_pomodoro: time = None
 
-        self.process_playing = None
         self.playing = True
 
         self.which_break = 1
@@ -211,7 +196,6 @@ class PlayMusic:
         self.start_time_playing_pomodoro: time = None
         self.stop_time_playing_pomodoro: time = None
 
-        self.process_playing = None
         self.playing = True
 
         self.which_break = 1
@@ -231,25 +215,28 @@ class PlayMusic:
             random.shuffle(self.__tracks)
 
     def playing_loop(self):
-        print('Playing_loop ....')
         while self.playing:
             for track in self.tracks:
                 while True:
                     self.start_time_playing_track = time.time()
 
-                    print('Playing')
                     length = int(LENGTH_SESSION - self.time_already_played)
 
-                    self.part_currently_playing = shell_playing(track, length, self.track_time_already_played)
+                    print("length -> {}".format(length))
 
-                    # self.part_currently_playing = ThreadPlayingMusic(
-                    #     path=track, length=length, starting_moment=self.track_time_already_played, volume=70)
-                    # self.part_currently_playing.start()
-                    # self.part_currently_playing.join()
+                    self.part_currently_playing = ThreadPlayingMusic(
+                        path=track, length=length, starting_moment=self.track_time_already_played)
+                    self.part_currently_playing.start()
+                    self.part_currently_playing.join()
 
                     self.stop_time_playing_track = time.time()
-                    if not self.part_currently_playing:
-                        break
+                    # if not self.part_currently_playing:
+                    #     break
+
+                    print('------------------------------------------')
+                    print(self.part_currently_playing)
+                    # if not self.part_currently_playing:
+                    #     break
 
                     # possible_end_track = True
                     # print(f"self.part_currently_playing -> {self.part_currently_playing.stopped()}")
@@ -258,25 +245,20 @@ class PlayMusic:
                     #     break
                     self.time_already_played += self.stop_time_playing_track - self.start_time_playing_track
                     self.track_time_already_played += self.time_already_played
+                    print(self.track_time_already_played)
                     if self.time_already_played >= LENGTH_SESSION:
-                        print('Przerwa !')
+                        print("przerwa")
                         if self.which_break % 4 == 0:
-                            print('długa przerwa ....')
                             self.play_long_pause()
                         else:
-                            print('Krótka przerwa ...')
                             self.play_short_pause()
                         self.time_already_played = 0
                         self.start_time_playing_pomodoro = time.time()
                         self.which_break += 1
-                    # elif possible_end_track:
-                    #     break
+                    else:
+                        break
 
-                if not self.part_currently_playing:
-                    break
                 self.track_time_already_played = 0
-            if not self.part_currently_playing:
-                break
 
     @staticmethod
     def play_track(path: str = 'name of track', volume: int = 100):
@@ -290,45 +272,14 @@ class PlayMusic:
             subprocess.run("ffplay -volume {volume} \"{track}\" -autoexit -nodisp".format(
                 volume=volume, track=path))
 
-        # def play_part_of_track(self, path: str = 'name of track', length: int = 'seconds', start: float = 0,
-        #                        volume: int = 100):
-        #
-        #     self.process_playing = await asyncio.create_subprocess_shell(
-        #         "ffplay -ss {start} -t {length} -volume {volume} \"{track}\" -autoexit -nodisp".format(
-        #             track=path, length=length, start=start, volume=volume),
-        #         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
-        #     stdout, stderr = await self.process_playing.communicate()
-
-        # import pdb
-        # pdb.set_trace()
-
-        """
-        stdout, stderr = await self.process_playing.communicate()
-        stdout = stdout.decode('UTF-8')
-        stderr = stderr.decode('UTF-8')
-        print(stdout)
-        print('-----------------------------------------')
-        print(stderr)
-        """
-
-        # TODO ZMIANA ZASADY ZIAŁANIA:
-        #  pytanie o pause end ma wyskoczyć przy każdym subprocesie (gather w tej metodzie, a nie przy wywołaniu)
-        #  i po przerwaniu kończy grać wszystko. Następnie po wciśnięciu play gramy od początku.
-
     def stop_pomodoro(self):
-        parent = psutil.Process(self.part_currently_playing.pid)
-        for child in parent.children(recursive=True):
-            child.terminate()
-        parent.terminate()
+        # parent = psutil.Process(self.part_currently_playing.pid)
+        # for child in parent.children(recursive=True):
+        #     child.terminate()
+        # parent.terminate()
 
         self.part_currently_playing.stop()
         print('Playing should be stopped .')
-        # if self.process_playing.returncode is None:
-        #     parent = psutil.Process(self.process_playing.pid)
-        #     for child in parent.children(recursive=True):
-        #         child.terminate()
-        #     parent.terminate()
-        #     self.stop_time_playing_track = time.time()
 
     def play_short_pause(self):
         """Playing short break background music with bells at the beginning and at the end."""
@@ -360,12 +311,6 @@ class PlayMusic:
         self.part_currently_playing.join()
         go_to_tracks()
 
-        # await self.play_part_of_track('bell.mp3', length=4, volume=15)
-        # length = LENGTH_LONG_PAUSE - 2 * 4
-        # await self.play_part_of_track('copy-break-rain.mp3', length=length)
-        # await self.play_part_of_track('bell.mp3', length=4, volume=15)
-        # go_to_tracks()
-
 
 if __name__ == '__main__':
     # print(sys.argv)
@@ -378,25 +323,13 @@ if __name__ == '__main__':
         #     task = asyncio.run(pomodoro_music.playing_loop())
 
         if arg.lower() == 'play':
-            go_to_tracks()
+            # go_to_tracks()
             # track_name = 'Zeamsone Everest ft Gedz.mp3'
             # pom = ThreadPlayingMusic('Zeamsone Everest ft Gedz.mp3', length=25, starting_moment=10)
             # pom.start()
             # pom.join()
 
             pomodoro_music.playing_loop()
-
-            # go_to_tracks()
-
-            # if track_in_location(track_name):
-            #     shell_playing(track_name, 25, 10)
-            #
-            # pom = threading.Thread(target=shell_playing, args=(track_name, 25, 10))
-            # pom.start()
-            # pom.join()
-
-            # pom.join()
-            # pomodoro_music.playing_loop()
 
             # async def playback_management():
             #     await ainput('Press Enter to finish ...\n')
@@ -411,8 +344,7 @@ if __name__ == '__main__':
             #         await task
             #     except asyncio.CancelledError:
             #         task.cancel()
-            #
-            #
+
             # asyncio.run(play_pomodoro())
 
         elif arg.startswith('https'):
