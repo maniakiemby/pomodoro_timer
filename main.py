@@ -32,9 +32,10 @@ from pytube import YouTube
 # AudioSegment.ffmpeg = "C:\\ffmpeg\\bin\\ffmpeg.exe"
 
 # all lengths in seconds
-LENGTH_SESSION = 25 * 60
-LENGTH_SHORT_PAUSE = 5 * 60
+LENGTH_SESSION = 10  # 25 * 60
+LENGTH_SHORT_PAUSE = 10  # 5 * 60
 LENGTH_LONG_PAUSE = 30 * 60
+COUNT_SESSIONS = 3  # po ilu sesjach jest dłuższa przerwa
 
 # paths
 ABSOLUTE_PATH = os.getcwd()
@@ -178,13 +179,12 @@ class PlayMusic:
         self.background_music = 'copy-break-rain.mp3'
         self.start_time_playing_track: time = None
         self.stop_time_playing_track: time = None
-        self.start_time_playing_pomodoro: time = None
-        self.stop_time_playing_pomodoro: time = None
 
-        self.playing = True
+        self.is_playing = False
+        self.is_break = False
 
         self.which_break = 1
-        self.time_already_played = 0
+        self.pomodoro_session_time_already_played = 0
         self.track_time_already_played = 0
         self.part_currently_playing = None
 
@@ -193,13 +193,12 @@ class PlayMusic:
     def reset(self):
         self.start_time_playing_track: time = None
         self.stop_time_playing_track: time = None
-        self.start_time_playing_pomodoro: time = None
-        self.stop_time_playing_pomodoro: time = None
 
-        self.playing = True
+        self.is_playing = False
+        self.is_break = False
 
         self.which_break = 1
-        self.time_already_played = 0
+        self.pomodoro_session_time_already_played = 0
         self.track_time_already_played = 0
         self.part_currently_playing = None
 
@@ -215,14 +214,11 @@ class PlayMusic:
             random.shuffle(self.__tracks)
 
     def playing_loop(self):
-        while self.playing:
+        while self.is_playing:
             for track in self.tracks:
-                while True:
+                while self.is_playing:
                     self.start_time_playing_track = time.time()
-
-                    length = int(LENGTH_SESSION - self.time_already_played)
-
-                    print("length -> {}".format(length))
+                    length = int(LENGTH_SESSION - self.pomodoro_session_time_already_played)
 
                     self.part_currently_playing = ThreadPlayingMusic(
                         path=track, length=length, starting_moment=self.track_time_already_played)
@@ -230,34 +226,26 @@ class PlayMusic:
                     self.part_currently_playing.join()
 
                     self.stop_time_playing_track = time.time()
-                    # if not self.part_currently_playing:
-                    #     break
+                    self.pomodoro_session_time_already_played +=\
+                        self.stop_time_playing_track - self.start_time_playing_track
+                    self.track_time_already_played += self.pomodoro_session_time_already_played
 
-                    print('------------------------------------------')
-                    print(self.part_currently_playing)
-                    # if not self.part_currently_playing:
-                    #     break
+                    if self.part_currently_playing.stopped():
+                        if self.is_playing:
+                            break
+                        else:
+                            self.reset()
+                            return
 
-                    # possible_end_track = True
-                    # print(f"self.part_currently_playing -> {self.part_currently_playing.stopped()}")
-                    # if self.part_currently_playing.stopped():
-                    #     possible_end_track = False
-                    #     break
-                    self.time_already_played += self.stop_time_playing_track - self.start_time_playing_track
-                    self.track_time_already_played += self.time_already_played
-                    print(self.track_time_already_played)
-                    if self.time_already_played >= LENGTH_SESSION:
-                        print("przerwa")
-                        if self.which_break % 4 == 0:
+                    if self.pomodoro_session_time_already_played >= LENGTH_SESSION:
+                        self.is_break = True
+                        if self.which_break % COUNT_SESSIONS == 0:
                             self.play_long_pause()
                         else:
                             self.play_short_pause()
-                        self.time_already_played = 0
-                        self.start_time_playing_pomodoro = time.time()
+                        self.pomodoro_session_time_already_played = 0
                         self.which_break += 1
-                    else:
-                        break
-
+                        self.is_break = False
                 self.track_time_already_played = 0
 
     @staticmethod
@@ -273,42 +261,42 @@ class PlayMusic:
                 volume=volume, track=path))
 
     def stop_pomodoro(self):
-        # parent = psutil.Process(self.part_currently_playing.pid)
-        # for child in parent.children(recursive=True):
-        #     child.terminate()
-        # parent.terminate()
-
         self.part_currently_playing.stop()
-        print('Playing should be stopped .')
 
     def play_short_pause(self):
         """Playing short break background music with bells at the beginning and at the end."""
         go_to_preludes()
-        self.part_currently_playing = ThreadPlayingMusic(path='bell.mp3', length=4, volume=15)
-        self.part_currently_playing.start()
-        self.part_currently_playing.join()
+        if self.is_playing:
+            self.part_currently_playing = ThreadPlayingMusic(path='bell.mp3', length=4, volume=15)
+            self.part_currently_playing.start()
+            self.part_currently_playing.join()
         length = LENGTH_SHORT_PAUSE - 2 * 4
-        self.part_currently_playing = ThreadPlayingMusic(path='copy-break-rain.mp3', length=length)
-        self.part_currently_playing.start()
-        self.part_currently_playing.join()
-        self.part_currently_playing = ThreadPlayingMusic(path='bell.mp3', length=4, volume=15)
-        self.part_currently_playing.start()
-        self.part_currently_playing.join()
+        if self.is_playing:
+            self.part_currently_playing = ThreadPlayingMusic(path='copy-break-rain.mp3', length=length)
+            self.part_currently_playing.start()
+            self.part_currently_playing.join()
+        if self.is_playing:
+            self.part_currently_playing = ThreadPlayingMusic(path='bell.mp3', length=4, volume=15)
+            self.part_currently_playing.start()
+            self.part_currently_playing.join()
         go_to_tracks()
 
     def play_long_pause(self):
         """Playing long break background music with bells at the beginning and at the end."""
         go_to_preludes()
-        self.part_currently_playing = ThreadPlayingMusic(path='bell.mp3', length=4, volume=15)
-        self.part_currently_playing.start()
-        self.part_currently_playing.join()
+        if self.is_playing:
+            self.part_currently_playing = ThreadPlayingMusic(path='bell.mp3', length=4, volume=15)
+            self.part_currently_playing.start()
+            self.part_currently_playing.join()
         length = LENGTH_LONG_PAUSE - 2 * 4
-        self.part_currently_playing = ThreadPlayingMusic(path='copy-break-rain.mp3', length=length)
-        self.part_currently_playing.start()
-        self.part_currently_playing.join()
-        self.part_currently_playing = ThreadPlayingMusic(path='bell.mp3', length=4, volume=15)
-        self.part_currently_playing.start()
-        self.part_currently_playing.join()
+        if self.is_playing:
+            self.part_currently_playing = ThreadPlayingMusic(path='copy-break-rain.mp3', length=length)
+            self.part_currently_playing.start()
+            self.part_currently_playing.join()
+        if self.is_playing:
+            self.part_currently_playing = ThreadPlayingMusic(path='bell.mp3', length=4, volume=15)
+            self.part_currently_playing.start()
+            self.part_currently_playing.join()
         go_to_tracks()
 
 
@@ -319,33 +307,9 @@ if __name__ == '__main__':
     if len(sys.argv) == 2:
         arg = sys.argv[1]
 
-        # if arg == 'playing':
-        #     task = asyncio.run(pomodoro_music.playing_loop())
-
         if arg.lower() == 'play':
-            # go_to_tracks()
-            # track_name = 'Zeamsone Everest ft Gedz.mp3'
-            # pom = ThreadPlayingMusic('Zeamsone Everest ft Gedz.mp3', length=25, starting_moment=10)
-            # pom.start()
-            # pom.join()
 
             pomodoro_music.playing_loop()
-
-            # async def playback_management():
-            #     await ainput('Press Enter to finish ...\n')
-            #     await pomodoro_music.stop_pomodoro()
-            #     asyncio.get_running_loop().stop()
-            #
-            #
-            # async def play_pomodoro():
-            #     task = asyncio.gather(pomodoro_music.playing_loop(), playback_management())
-            #
-            #     try:
-            #         await task
-            #     except asyncio.CancelledError:
-            #         task.cancel()
-
-            # asyncio.run(play_pomodoro())
 
         elif arg.startswith('https'):
             new_track = pomodoro.download_track_to_folder(arg)

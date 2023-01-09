@@ -1,7 +1,7 @@
 <Player>:
     Button:
         id: playing
-        pos_hint: {'x': .1, 'top': .8}
+        pos_hint: {'x': .05, 'top': .8}
         size_hint: .1, .1
         background_color: 0,0,0,0
 
@@ -15,7 +15,7 @@
 
     Button:
         id: next
-        pos_hint: {'x': .4, 'top': .8}
+        pos_hint: {'x': .35, 'top': .8}
         size_hint: .1, .1
         background_color: 0,0,0,0
 
@@ -30,11 +30,11 @@
         id: timer
         font_size: '55sp'
         size: self.texture_size
-        pos: 200, 75
+        pos: 225, 75
 
     Button:
         id: volume
-        pos_hint: {'x': .3, 'top': .5}
+        pos_hint: {'x': .24, 'top': .8}
         size_hint: .05, .1
         background_color: 0,0,0,0
 
@@ -47,11 +47,11 @@
             allow_stretch: True
     Label:
         id: break_or_work
-        text: 'tap play to \n start pomodoro'
-        font_size: 30
+        text: 'Naciśnij play aby zacząć sesję pomodoro.'
+        font_size: '30sp'
         #size_hint_y: None
         #height: self.texture_size[1] + dp(10)
-        pos_hint: {'x': .7, 'top': .6}
+        pos_hint: {'x': .3, 'top': .45}
         size_hint: .2, .1
 
     TextInput:
@@ -76,7 +76,7 @@
 
     Button:
         id: settings
-        pos_hint: {'x': .5, 'top': .5}
+        pos_hint: {'x': .5, 'top': .8}
         size_hint: .07, .1
         background_color: 0,0,0,0
 

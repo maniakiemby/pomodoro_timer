@@ -50,6 +50,7 @@ class Player(FloatLayout):
         self.playing.bind(on_release=self.play_pomodoro)
         self.playing_image = self.ids['playing_image']  # names: play, no play
         self.next = self.ids['next']
+        self.next.bind(on_release=self.next_track)
         self.timer = self.ids['timer']
         self.volume = self.ids['volume']
         self.volume_image = self.ids['volume_image']
@@ -76,23 +77,40 @@ class Player(FloatLayout):
         self.playing_image.source = "atlas://data//images//myatlas/resume"
         self.stage = 'play'
 
+        self.play_music.is_playing = True
         self.thread_play_music = threading.Thread(target=self.play_music.playing_loop)
         self.thread_play_music.start()
 
         self.timer.beginning()
+
+        self.break_or_work.text = 'Czas sesji, teraz skup się na zadaniu.'
+        self.break_or_work.font_size = '34sp'
+        # self.break_or_work.pos_hint = {'x': .25}
+
         # self.thread_play_music.join()
 
     def stop(self, *args):
         self.playing_image.source = "atlas://data//images//myatlas/play"
         self.stage = 'no play'
 
-        self.play_music.playing = False
+        self.play_music.is_playing = False
         self.play_music.part_currently_playing.stop()
-        self.play_music.reset()
+        # self.play_music.reset()
+
+        self.timer.time_start = None
+
+        self.break_or_work.text = 'Czas przerwy, teraz jest czas na rozluźnienie umysłu.'
+        self.break_or_work.font_size = '20sp'
+        # self.break_or_work.pos_hint = {'x': .45}
 
     # def resume(self, *args):
     #     self.playing_image.source = "atlas://data//images//myatlas/resume"
     #     self.stage = 'play'
+
+    def next_track(self, *args):
+        if not self.play_music.is_break and self.play_music.is_playing:
+            self.play_music.part_currently_playing.stop()
+        # todo dodać komunikat, że nie można zmieniać utworu w trakcie przerwy.
 
     def download_new_track(self, *args):
         pass
@@ -129,13 +147,27 @@ class Timer(Label):
 
 
 class MyApp(App):
+
     def build(self):
         Window.clearcolor = (151/255, 152/255, 164/255)
         return Player()
 
+    # def on_stop(self):
+    #     print('Goodbye')
+    #     _app = App.get_running_app()
+    #     print(App.get_running_app().__str__())
+    #     print(App.get_running_app()._app_name())
+    #     print(dir(App.get_running_app()))
+    #     if _app.play_music.is_playing:
+    #         _app.stop()
+        # print(_app.walk())
+        # if _app.play_music.is_playing:
+        #     _app.play_music.stop()
+
 
 if __name__ == '__main__':
     app = MyApp()
+    print(app.__str__())
     app.run()
 
     try:
