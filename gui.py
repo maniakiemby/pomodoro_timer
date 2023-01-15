@@ -22,7 +22,7 @@ from kivy.atlas import Atlas
 from aioconsole import ainput
 from kivy.clock import Clock
 
-from main import PlayMusic, Pomodoro
+from main import PlayMusic, Pomodoro, ABSOLUTE_PATH
 
 
 kivy.require('2.1.0')
@@ -65,15 +65,15 @@ class Player(FloatLayout):
 
     def play_pomodoro(self, *args):
         if self.stage == 'no play':
-            self.play()
+            self.start_playing()
 
         elif self.stage == 'play':
-            self.stop()
+            self.stop_playing()
 
         # elif self.stage == 'pause':
         #     self.resume()
 
-    def play(self, *args):
+    def start_playing(self, *args):
         self.playing_image.source = "atlas://data//images//myatlas/resume"
         self.stage = 'play'
 
@@ -89,17 +89,17 @@ class Player(FloatLayout):
 
         # self.thread_play_music.join()
 
-    def stop(self, *args):
+    def stop_playing(self, *args):
         self.playing_image.source = "atlas://data//images//myatlas/play"
         self.stage = 'no play'
 
         self.play_music.is_playing = False
-        self.play_music.part_currently_playing.stop()
-        # self.play_music.reset()
+        if self.play_music.part_currently_playing:
+            self.play_music.part_currently_playing.stop()
 
         self.timer.time_start = None
 
-        self.break_or_work.text = 'Czas przerwy, teraz jest czas na rozluźnienie umysłu.'
+        self.break_or_work.text = 'Naciśnij play aby zacząć sesję pomodoro.'
         self.break_or_work.font_size = '20sp'
         # self.break_or_work.pos_hint = {'x': .45}
 
@@ -136,41 +136,25 @@ class Timer(Label):
         else:
             self.text = time.strftime(self.time_str)
 
-    # def to_count(self):
-    #     self.text
-
     def beginning(self):
-        # super(Timer, self).__init__(text=time.strftime('00:00'))
-        # self.text = time.strftime('00:00')
-        # Clock.schedule_interval(self.update_time, 1)
         self.time_start = time.time()
 
 
 class MyApp(App):
-
     def build(self):
         Window.clearcolor = (151/255, 152/255, 164/255)
         return Player()
 
-    # def on_stop(self):
-    #     print('Goodbye')
-    #     _app = App.get_running_app()
-    #     print(App.get_running_app().__str__())
-    #     print(App.get_running_app()._app_name())
-    #     print(dir(App.get_running_app()))
-    #     if _app.play_music.is_playing:
-    #         _app.stop()
-        # print(_app.walk())
-        # if _app.play_music.is_playing:
-        #     _app.play_music.stop()
+    def on_stop(self):
+        App.get_running_app().root.stop_playing()
 
 
 if __name__ == '__main__':
     app = MyApp()
-    print(app.__str__())
+    # print(app.__str__())
     app.run()
 
-    try:
-        sys.exit(app.stop())
-    except SystemExit:
-        print('Player Window Closed')
+    # try:
+    #     sys.exit(app.stop())
+    # except SystemExit:
+    #     print('Player Window Closed')
