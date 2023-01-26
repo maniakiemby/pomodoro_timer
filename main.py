@@ -32,8 +32,8 @@ from pytube import YouTube
 # AudioSegment.ffmpeg = "C:\\ffmpeg\\bin\\ffmpeg.exe"
 
 # all lengths in seconds
-LENGTH_SESSION = 10  # 25 * 60
-LENGTH_SHORT_PAUSE = 10  # 5 * 60
+LENGTH_SESSION = 25 * 60
+LENGTH_SHORT_PAUSE = 5 * 60
 LENGTH_LONG_PAUSE = 30 * 60
 COUNT_SESSIONS = 3  # po ilu sesjach jest dłuższa przerwa
 
@@ -70,9 +70,17 @@ def go_to_preludes():
     os.chdir(ABSOLUTE_PATH + PATH_TO_PRELUDES)
 
 
+def file_in_location(file_name: str) -> bool:
+    if os.path.exists(file_name):
+        return True
+    else:
+        return False
+
+
 class Pomodoro:
     def __init__(self):
         self.music = None
+        self.link_to_download = None
         # self.playing = PlayMusic()
 
     # def start(self):
@@ -83,19 +91,31 @@ class Pomodoro:
         #  lub jeśli nic nie jest odtwarzane, zaczyna odtwarzać od początku
         pass
 
-    def download_track_to_folder(self, link: str) -> str:
+    def download_track_to_folder(self, link: str = None) -> str:
         """This method download sound from youtube.com, save to data/downloads_new/ and convert to .mp3.
         Return only title of saved track"""
-        yt = YouTube(link)
+        if link:
+            yt = YouTube(link)
+        else:
+            yt = YouTube(self.link_to_download)
+
+        # print('length: {}'.format(yt.length))
+        name_of_track = yt.title + 'mp3'
+        if file_in_location(name_of_track):
+            return ' fasle'  # todo sprawdzić czemu to jest takie dziwne
+            # raise FileExistsError('File already exists.')
+
         audio = yt.streams.filter(only_audio=True).first()
+        # print('filesize_approx: {}'.format(audio.filesize_approx))
         if audio:
-            downloaded_audio_path = audio.download(output_path=ABSOLUTE_PATH + PATH_TO_TRACKS, timeout=3, max_retries=3)
-            if downloaded_audio_path:
-                path = downloaded_audio_path.split('\\')[-1]
+            downloaded_audio = audio.download(output_path=ABSOLUTE_PATH + PATH_TO_TRACKS,
+                                              skip_existing=True, timeout=3, max_retries=3)
+            if downloaded_audio:
+                path = downloaded_audio.split('\\')[-1]
                 path = self.converting_mp4_to_mp3(path)
 
-                self.music = path
-                self.change_track()
+                # self.music = path
+                # self.change_track()
 
                 return path
             else:
@@ -114,8 +134,10 @@ class Pomodoro:
         if os.path.exists(file):
             base, ext = os.path.splitext(file)
             destination = base + '.mp3'
+            if os.path.exists(destination):
+                return False
             try:
-                os.system("""ffmpeg -i "{}" "{}""""".format(file, destination))
+                os.system("ffmpeg -i \"{}\" \"{}\"".format(file, destination))
             except TypeError:
                 print("Problem with converting file using ffmpeg.")
             else:
@@ -130,7 +152,7 @@ class Pomodoro:
             raise FileNotFoundError(
                 "In current path '{}' don't exists.\ncurrent location: {}".format(file, os.getcwd()))
 
-        return False
+        # return False
 
 
 def shell_playing(path, length, starting_moment=0, volume=100):
@@ -226,7 +248,7 @@ class PlayMusic:
                     self.part_currently_playing.join()
 
                     self.stop_time_playing_track = time.time()
-                    self.pomodoro_session_time_already_played +=\
+                    self.pomodoro_session_time_already_played += \
                         self.stop_time_playing_track - self.start_time_playing_track
                     self.track_time_already_played += self.pomodoro_session_time_already_played
 

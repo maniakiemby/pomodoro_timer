@@ -9,6 +9,7 @@ from asyncio import new_event_loop, get_event_loop
 import threading
 
 import kivy
+import psutil
 from kivy.config import Config
 from kivy.app import App
 from kivy.lang import Builder
@@ -32,13 +33,6 @@ RUNNING_PATH = os.getcwd()
 Config.set('graphics', 'width', '800')
 Config.set('graphics', 'height', '250')
 Config.write()
-
-
-# class Play(threading.Thread):
-#     def run(self) -> None:
-#         play = PlayMusic()
-#         asyncio.run(play.playing_loop())
-#         play.stop_pomodoro()
 
 
 class Player(FloatLayout):
@@ -109,11 +103,34 @@ class Player(FloatLayout):
 
     def next_track(self, *args):
         if not self.play_music.is_break and self.play_music.is_playing:
-            self.play_music.part_currently_playing.stop()
+            try:
+                self.play_music.stop_pomodoro()
+            except psutil.NoSuchProcess("Song cannot be changed, no such actually playing process."):
+                raise
+
         # todo dodać komunikat, że nie można zmieniać utworu w trakcie przerwy.
 
+    def wrapped_download(self):
+        # todo: zmienić ikonę pobierania na jakiś 'oczekiwacz'
+        #  i zablokować możliwość rozpoczęcia kolejnego procesu pobierania.
+
+        pomodoro = Pomodoro()
+        pomodoro.link_to_download = self.new_item.text
+        pomodoro.download_track_to_folder()
+        print('Downloading and converting are done.')
+
+        # todo: zmienić spowrotem na ikonę pobierania i odblokować jego działanie
+
     def download_new_track(self, *args):
-        pass
+        download_mp3 = threading.Thread(target=self.wrapped_download)
+        download_mp3.start()
+
+        # TODO: dodać w tym miejscu blokadę na przycisk download do momentu wykonania w całości zadania.
+        #  może być tak, że plik już istnieje dodać jakąś metodę, która by o tym informowała
+        #  i nie pobierała nie potrzebnie drugi raz tego pliu.
+
+        #  todo dodatkowe: dodać jakieś ładowanie / informację na temat tego ile czasu jeszcze zajmie
+        #   pobieranie i convertowanie pliku.
 
     def open_settings(self, *args):
         # open file with settings
@@ -140,6 +157,18 @@ class Timer(Label):
         self.time_start = time.time()
 
 
+class ButtonDownload(Button):
+    def __init__(self, **kwargs):
+        super(ButtonDownload, self).__init__(**kwargs)
+        self.blockade = False
+
+    def lock(self):
+        self.blockade = True
+
+    def unlock(self):
+        self.blockade = False
+
+
 class MyApp(App):
     def build(self):
         Window.clearcolor = (151/255, 152/255, 164/255)
@@ -147,6 +176,8 @@ class MyApp(App):
 
     def on_stop(self):
         App.get_running_app().root.stop_playing()
+
+        # todo: nie działa to wyłączanie
 
 
 if __name__ == '__main__':
