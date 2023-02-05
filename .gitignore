@@ -5,3 +5,7 @@ data/images/unused
 *.mp3
 *.mp4
 async_test.py
+build
+dist
+pomodoro.spec
+

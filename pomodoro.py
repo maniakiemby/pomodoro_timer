@@ -175,7 +175,7 @@ class ButtonDownload(Button):
         self.blockade = False
 
 
-class MyApp(App):
+class PomodoroApp(App):
     def build(self):
         Window.clearcolor = (151/255, 152/255, 164/255)
         return Player()
@@ -187,7 +187,7 @@ class MyApp(App):
 
 
 if __name__ == '__main__':
-    app = MyApp()
+    app = PomodoroApp()
     # print(app.__str__())
     app.run()
 

@@ -56,6 +56,7 @@ if not ABSOLUTE_PATH.endswith('Pomodoro'):
             raise PermissionError(
                 "Unrecognized localization. probably the application was not launched from the right place "
                 "or the folder arrangement is wrong."
+                "Current location : {}".format(os.getcwd())
             )
     ABSOLUTE_PATH = '\\'.join(location_split)
 
