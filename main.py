@@ -45,7 +45,7 @@ if platform.system() == 'Linux':
     PATH_TO_TRACKS = '/data/downloads_new'
     PATH_TO_PRELUDES = '/data'
 else:
-    PPATH_TO_TRACKS = '\data\downloads_new'
+    PATH_TO_TRACKS = '\data\downloads_new'
     PATH_TO_PRELUDES = '\data'
 
 if not ABSOLUTE_PATH.endswith('Pomodoro'):
