@@ -12,6 +12,7 @@ import threading
 import kivy
 import psutil
 from kivy.config import Config
+# from kivy.clock import mainthread
 from kivy.app import App
 from kivy.lang import Builder
 from kivy.uix.floatlayout import FloatLayout
@@ -118,9 +119,13 @@ class Player(FloatLayout):
         pomodoro = Pomodoro()
         pomodoro.link_to_download = self.new_item.text
         pomodoro.download_track_to_folder()
+        self.play_music.tracks = None  # This triggers the addition of a new track to the mixtape
         print('Downloading and converting are done.')
 
         # todo: zmienić spowrotem na ikonę pobierania i odblokować jego działanie
+
+        return True
+        # todo: Dodać coś, żeby wątek się skończył, obecne zachowanie wygląda jakby się nie kończył.
 
     def download_new_track(self, *args):
         download_mp3 = threading.Thread(target=self.wrapped_download)

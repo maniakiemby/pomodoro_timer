@@ -1,5 +1,6 @@
 # coding=UTF-8
 import asyncio
+import platform
 import os
 import sys
 import threading
@@ -40,8 +41,12 @@ COUNT_SESSIONS = 3  # po ilu sesjach jest dłuższa przerwa
 
 # paths
 ABSOLUTE_PATH = os.getcwd()
-PATH_TO_TRACKS = '\data\downloads_new'
-PATH_TO_PRELUDES = '\data'
+if platform.system() == 'Linux':
+    PATH_TO_TRACKS = '/data/downloads_new'
+    PATH_TO_PRELUDES = '/data'
+else:
+    PPATH_TO_TRACKS = '\data\downloads_new'
+    PATH_TO_PRELUDES = '\data'
 
 if not ABSOLUTE_PATH.endswith('Pomodoro'):
     location_split = ABSOLUTE_PATH.split("\\")
@@ -233,11 +238,15 @@ class PlayMusic:
     def tracks(self, values):
         go_to_tracks()
         if values is None:
-            self.__tracks = [x[2] for x in os.walk(os.getcwd())][0]
-            random.shuffle(self.__tracks)
+            try:
+                self.__tracks = [x[2] for x in os.walk(os.getcwd()) if x[2][0].endswith('.mp3')][0]
+                random.shuffle(self.__tracks)
+            except IndexError:
+                print('There is no tracks in \'/data/downloads_new\'')
+                self.__tracks = None
 
     def playing_loop(self):
-        while self.is_playing:
+        while self.is_playing and self.tracks:
             for track in self.tracks:
                 while self.is_playing:
                     self.start_time_playing_track = time.time()
