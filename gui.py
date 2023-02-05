@@ -1,11 +1,12 @@
+# coding=UTF-8
 import datetime
 import os
 import subprocess
 # from subprocess import Popen, CREATE_NEW_CONSOLE
-import asyncio
+# import asyncio
 import sys
 import time
-from asyncio import new_event_loop, get_event_loop
+# from asyncio import new_event_loop, get_event_loop
 import threading
 
 import kivy
@@ -20,7 +21,7 @@ from kivy.uix.button import Button
 from kivy.uix.image import Image
 from kivy.core.window import Window
 from kivy.atlas import Atlas
-from aioconsole import ainput
+# from aioconsole import ainput
 from kivy.clock import Clock
 
 from main import PlayMusic, Pomodoro, ABSOLUTE_PATH

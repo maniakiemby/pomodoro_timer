@@ -1,3 +1,4 @@
+# coding=UTF-8
 import asyncio
 import os
 import sys
@@ -14,8 +15,8 @@ import subprocess
 import signal
 
 import psutil
-from aioconsole import ainput
-import ffmpeg
+# from aioconsole import ainput
+# import ffmpeg
 from pytube import YouTube
 
 # from pydub import AudioSegment
